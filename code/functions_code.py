@@ -20,6 +20,33 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+##################some tools to be used##########################################
+def makerkgrp(D, gp):
+    if D['grp'] >= gp:
+        x = gp - 1
+    else:
+        x = D['grp']
+        
+    return x   
+
+def remove_sub_list(lst, sub_lst, dup):
+    if dup:
+        filter_set = set(sub_lst)
+        lst_fixed = [x for x in lst if x not in filter_set]
+    else:    
+        lst_fixed = list(set(lst) - set(sub_lst))
+        
+    return lst_fixed     
+
+def cosemerge(dflist, keys, stymerge):
+    k = 0    
+    res_df = pd.DataFrame([])
+    for tem_df in dflist:
+        if k==0: res_df = tem_df.copy()
+        else: res_df = pd.merge(res_df, tem_df, on = keys, how = stymerge)
+        k = k + 1
+    return res_df
+    
 #################################################################
 '''
 1 ) Function Purpose:
@@ -1192,10 +1219,15 @@ The function returns a DataFrame (`score_dec`) containing decile-wise metrics, i
 '''
 
 def lift_chart(X_test, pred, actual, decn, plot_flag=True):
-    DATA = X_test.assign(rk=range(1, len(X_test) + 1), 
-                        grp=np.floor(np.arange(1, len(X_test) + 1) / (len(X_test) / decn)).astype(int),
-                        cnt=1,
-                        non_actual=1 - X_test[actual])
+    
+    DATA = X_test.sort_values([pred])
+    DATA['rk'] = list(range(1, 1+ len(DATA)))
+    parts = len(DATA) / decn
+    DATA['grp'] = np.floor((DATA['rk'] / parts))
+    DATA['grp'].value_counts()
+    DATA['grp'] = DATA.apply(makerkgrp, axis = 1, args=([decn]))
+    DATA['cnt'] = 1
+    DATA['non_actual'] = 1 - DATA[actual]
 
     grouped_data = DATA.groupby('grp')
     score_dec = pd.concat([
